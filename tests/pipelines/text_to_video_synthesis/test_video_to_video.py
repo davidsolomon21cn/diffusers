@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -196,9 +196,6 @@ class VideoToVideoSDPipelineFastTests(PipelineTesterMixin, unittest.TestCase):
     @unittest.skip(reason="`num_images_per_prompt` argument is not supported for this pipeline.")
     def test_num_images_per_prompt(self):
         pass
-
-    def test_progress_bar(self):
-        return super().test_progress_bar()
 
 
 @nightly
