@@ -1,4 +1,4 @@
-# Copyright 2023 The HuggingFace Team. All rights reserved.
+# Copyright 2024 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -216,8 +216,8 @@ class FlaxAttention(nn.Module):
             hidden_states = jax_memory_efficient_attention(
                 query_states, key_states, value_states, query_chunk_size=query_chunk_size, key_chunk_size=4096 * 4
             )
-
             hidden_states = hidden_states.transpose(1, 0, 2)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
         else:
             # compute attentions
             if self.split_head_dim:

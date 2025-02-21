@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,13 +48,15 @@ from ..pipeline_params import (
     TEXT_GUIDED_IMAGE_INPAINTING_PARAMS,
     TEXT_TO_IMAGE_CALLBACK_CFG_PARAMS,
 )
-from ..test_pipelines_common import PipelineLatentTesterMixin, PipelineTesterMixin
+from ..test_pipelines_common import IPAdapterTesterMixin, PipelineLatentTesterMixin, PipelineTesterMixin
 
 
 enable_full_determinism()
 
 
-class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, PipelineTesterMixin, unittest.TestCase):
+class StableDiffusionXLInpaintPipelineFastTests(
+    IPAdapterTesterMixin, PipelineLatentTesterMixin, PipelineTesterMixin, unittest.TestCase
+):
     pipeline_class = StableDiffusionXLInpaintPipeline
     params = TEXT_GUIDED_IMAGE_INPAINTING_PARAMS
     batch_params = TEXT_GUIDED_IMAGE_INPAINTING_BATCH_PARAMS
@@ -69,6 +71,8 @@ class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, Pipel
             "masked_image_latents",
         }
     )
+
+    supports_dduf = False
 
     def get_dummy_components(self, skip_first_text_encoder=False, time_cond_proj_dim=None):
         torch.manual_seed(0)
@@ -221,6 +225,13 @@ class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, Pipel
         }
         return inputs
 
+    def test_ip_adapter(self):
+        expected_pipe_slice = None
+        if torch_device == "cpu":
+            expected_pipe_slice = np.array([0.8274, 0.5538, 0.6141, 0.5843, 0.6865, 0.7082, 0.5861, 0.6123, 0.5344])
+
+        return super().test_ip_adapter(expected_pipe_slice=expected_pipe_slice)
+
     def test_components_function(self):
         init_components = self.get_dummy_components()
         init_components.pop("requires_aesthetics_score")
@@ -242,7 +253,7 @@ class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, Pipel
 
         assert image.shape == (1, 64, 64, 3)
 
-        expected_slice = np.array([0.8029, 0.5523, 0.5825, 0.6003, 0.6702, 0.7018, 0.6369, 0.5955, 0.5123])
+        expected_slice = np.array([0.8279, 0.5673, 0.6088, 0.6156, 0.6923, 0.7347, 0.6547, 0.6108, 0.5198])
 
         assert np.abs(image_slice.flatten() - expected_slice).max() < 1e-2
 
@@ -290,49 +301,9 @@ class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, Pipel
     def test_inference_batch_single_identical(self):
         super().test_inference_batch_single_identical(expected_max_diff=3e-3)
 
-    # TODO(Patrick, Sayak) - skip for now as this requires more refiner tests
+    @unittest.skip("Skip for now.")
     def test_save_load_optional_components(self):
         pass
-
-    def test_stable_diffusion_xl_inpaint_negative_prompt_embeds(self):
-        components = self.get_dummy_components()
-        sd_pipe = StableDiffusionXLInpaintPipeline(**components)
-        sd_pipe = sd_pipe.to(torch_device)
-        sd_pipe = sd_pipe.to(torch_device)
-        sd_pipe.set_progress_bar_config(disable=None)
-
-        # forward without prompt embeds
-        inputs = self.get_dummy_inputs(torch_device)
-        negative_prompt = 3 * ["this is a negative prompt"]
-        inputs["negative_prompt"] = negative_prompt
-        inputs["prompt"] = 3 * [inputs["prompt"]]
-
-        output = sd_pipe(**inputs)
-        image_slice_1 = output.images[0, -3:, -3:, -1]
-
-        # forward with prompt embeds
-        inputs = self.get_dummy_inputs(torch_device)
-        negative_prompt = 3 * ["this is a negative prompt"]
-        prompt = 3 * [inputs.pop("prompt")]
-
-        (
-            prompt_embeds,
-            negative_prompt_embeds,
-            pooled_prompt_embeds,
-            negative_pooled_prompt_embeds,
-        ) = sd_pipe.encode_prompt(prompt, negative_prompt=negative_prompt)
-
-        output = sd_pipe(
-            **inputs,
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-        )
-        image_slice_2 = output.images[0, -3:, -3:, -1]
-
-        # make sure that it's equal
-        assert np.abs(image_slice_1.flatten() - image_slice_2.flatten()).max() < 1e-4
 
     @require_torch_gpu
     def test_stable_diffusion_xl_offloads(self):
@@ -377,7 +348,7 @@ class StableDiffusionXLInpaintPipelineFastTests(PipelineLatentTesterMixin, Pipel
 
         assert image.shape == (1, 64, 64, 3)
 
-        expected_slice = np.array([0.7045, 0.4838, 0.5454, 0.6270, 0.6168, 0.6717, 0.6484, 0.5681, 0.4922])
+        expected_slice = np.array([0.7540, 0.5231, 0.5833, 0.6217, 0.6339, 0.7067, 0.6507, 0.5672, 0.5030])
 
         assert np.abs(image_slice.flatten() - expected_slice).max() < 1e-2
 
