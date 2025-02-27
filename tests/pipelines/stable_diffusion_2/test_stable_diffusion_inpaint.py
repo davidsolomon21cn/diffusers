@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ class StableDiffusion2InpaintPipelineFastTests(
             "generator": generator,
             "num_inference_steps": 2,
             "guidance_scale": 6.0,
-            "output_type": "numpy",
+            "output_type": "np",
         }
         return inputs
 
@@ -152,10 +152,23 @@ class StableDiffusion2InpaintPipelineFastTests(
     def test_inference_batch_single_identical(self):
         super().test_inference_batch_single_identical(expected_max_diff=3e-3)
 
+    def test_encode_prompt_works_in_isolation(self):
+        extra_required_param_value_dict = {
+            "device": torch.device(torch_device).type,
+            "do_classifier_free_guidance": self.get_dummy_inputs(device=torch_device).get("guidance_scale", 1.0) > 1.0,
+        }
+        return super().test_encode_prompt_works_in_isolation(extra_required_param_value_dict)
+
 
 @slow
 @require_torch_gpu
 class StableDiffusionInpaintPipelineIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        # clean up the VRAM before each test
+        super().setUp()
+        gc.collect()
+        torch.cuda.empty_cache()
+
     def tearDown(self):
         # clean up the VRAM after each test
         super().tearDown()
@@ -255,7 +268,6 @@ class StableDiffusionInpaintPipelineIntegrationTests(unittest.TestCase):
             scheduler=pndm,
             torch_dtype=torch.float16,
         )
-        pipe.to(torch_device)
         pipe.set_progress_bar_config(disable=None)
         pipe.enable_attention_slicing(1)
         pipe.enable_sequential_cpu_offload()

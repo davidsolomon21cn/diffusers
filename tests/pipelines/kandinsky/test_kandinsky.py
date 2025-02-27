@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -204,6 +204,8 @@ class KandinskyPipelineFastTests(PipelineTesterMixin, unittest.TestCase):
     ]
     test_xformers_attention = False
 
+    supports_dduf = False
+
     def get_dummy_components(self):
         dummy = Dummies()
         return dummy.get_dummy_components()
@@ -275,6 +277,12 @@ class KandinskyPipelineFastTests(PipelineTesterMixin, unittest.TestCase):
 @slow
 @require_torch_gpu
 class KandinskyPipelineIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        # clean up the VRAM before each test
+        super().setUp()
+        gc.collect()
+        torch.cuda.empty_cache()
+
     def tearDown(self):
         # clean up the VRAM after each test
         super().tearDown()
@@ -293,7 +301,7 @@ class KandinskyPipelineIntegrationTests(unittest.TestCase):
         pipe_prior.to(torch_device)
 
         pipeline = KandinskyPipeline.from_pretrained("kandinsky-community/kandinsky-2-1", torch_dtype=torch.float16)
-        pipeline = pipeline.to(torch_device)
+        pipeline.to(torch_device)
         pipeline.set_progress_bar_config(disable=None)
 
         prompt = "red cat, 4k photo"

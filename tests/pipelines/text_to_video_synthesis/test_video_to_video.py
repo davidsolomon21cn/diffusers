@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -197,8 +197,13 @@ class VideoToVideoSDPipelineFastTests(PipelineTesterMixin, unittest.TestCase):
     def test_num_images_per_prompt(self):
         pass
 
-    def test_progress_bar(self):
-        return super().test_progress_bar()
+    def test_encode_prompt_works_in_isolation(self):
+        extra_required_param_value_dict = {
+            "device": torch.device(torch_device).type,
+            "num_images_per_prompt": 1,
+            "do_classifier_free_guidance": self.get_dummy_inputs(device=torch_device).get("guidance_scale", 1.0) > 1.0,
+        }
+        return super().test_encode_prompt_works_in_isolation(extra_required_param_value_dict)
 
 
 @nightly
