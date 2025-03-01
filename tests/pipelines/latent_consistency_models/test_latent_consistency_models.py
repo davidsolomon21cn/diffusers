@@ -20,13 +20,15 @@ from diffusers.utils.testing_utils import (
 )
 
 from ..pipeline_params import TEXT_TO_IMAGE_BATCH_PARAMS, TEXT_TO_IMAGE_IMAGE_PARAMS, TEXT_TO_IMAGE_PARAMS
-from ..test_pipelines_common import PipelineLatentTesterMixin, PipelineTesterMixin
+from ..test_pipelines_common import IPAdapterTesterMixin, PipelineLatentTesterMixin, PipelineTesterMixin
 
 
 enable_full_determinism()
 
 
-class LatentConsistencyModelPipelineFastTests(PipelineLatentTesterMixin, PipelineTesterMixin, unittest.TestCase):
+class LatentConsistencyModelPipelineFastTests(
+    IPAdapterTesterMixin, PipelineLatentTesterMixin, PipelineTesterMixin, unittest.TestCase
+):
     pipeline_class = LatentConsistencyModelPipeline
     params = TEXT_TO_IMAGE_PARAMS - {"negative_prompt", "negative_prompt_embeds"}
     batch_params = TEXT_TO_IMAGE_BATCH_PARAMS - {"negative_prompt"}
@@ -105,6 +107,12 @@ class LatentConsistencyModelPipelineFastTests(PipelineLatentTesterMixin, Pipelin
             "output_type": "np",
         }
         return inputs
+
+    def test_ip_adapter(self):
+        expected_pipe_slice = None
+        if torch_device == "cpu":
+            expected_pipe_slice = np.array([0.1403, 0.5072, 0.5316, 0.1202, 0.3865, 0.4211, 0.5363, 0.3557, 0.3645])
+        return super().test_ip_adapter(expected_pipe_slice=expected_pipe_slice)
 
     def test_lcm_onestep(self):
         device = "cpu"  # ensure determinism for the device-dependent torch.Generator
@@ -204,6 +212,13 @@ class LatentConsistencyModelPipelineFastTests(PipelineLatentTesterMixin, Pipelin
 
         output = pipe(**inputs)[0]
         assert output.abs().sum() == 0
+
+    def test_encode_prompt_works_in_isolation(self):
+        extra_required_param_value_dict = {
+            "device": torch.device(torch_device).type,
+            "do_classifier_free_guidance": self.get_dummy_inputs(device=torch_device).get("guidance_scale", 1.0) > 1.0,
+        }
+        return super().test_encode_prompt_works_in_isolation(extra_required_param_value_dict)
 
 
 @slow

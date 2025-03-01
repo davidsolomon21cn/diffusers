@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 HuggingFace Inc.
+# Copyright 2024 HuggingFace Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,6 +45,8 @@ class PaintByExamplePipelineFastTests(PipelineTesterMixin, unittest.TestCase):
     params = IMAGE_GUIDED_IMAGE_INPAINTING_PARAMS
     batch_params = IMAGE_GUIDED_IMAGE_INPAINTING_BATCH_PARAMS
     image_params = frozenset([])  # TO_DO: update the image_prams once refactored VaeImageProcessor.preprocess
+
+    supports_dduf = False
 
     def get_dummy_components(self):
         torch.manual_seed(0)
@@ -117,7 +119,7 @@ class PaintByExamplePipelineFastTests(PipelineTesterMixin, unittest.TestCase):
             "generator": generator,
             "num_inference_steps": 2,
             "guidance_scale": 6.0,
-            "output_type": "numpy",
+            "output_type": "np",
         }
         return inputs
 
@@ -174,6 +176,12 @@ class PaintByExamplePipelineFastTests(PipelineTesterMixin, unittest.TestCase):
 @nightly
 @require_torch_gpu
 class PaintByExamplePipelineIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        # clean up the VRAM before each test
+        super().setUp()
+        gc.collect()
+        torch.cuda.empty_cache()
+
     def tearDown(self):
         # clean up the VRAM after each test
         super().tearDown()
